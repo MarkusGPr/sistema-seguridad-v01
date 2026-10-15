@@ -232,25 +232,41 @@ Motivo no resuelta: ${l.motivoNoResuelta}`:""}
   <script>(function(){function m(a){var h=a.getAttribute("href");if(!h)return;try{var u=new URL(h,document.baseURI);if((u.protocol==="http:"||u.protocol==="https:")&&u.host!==location.host){a.target="_blank";a.rel="noopener noreferrer";}}catch(e){}}function s(){document.querySelectorAll("a[href]").forEach(m);}if(document.readyState!=="loading"){s();}else{document.addEventListener("DOMContentLoaded",s);}document.addEventListener("click",function(e){var a=e.target&&e.target.closest&&e.target.closest("a[href]");if(a){m(a);}},true);})();</script>
   <script type="application/json" data-clippy-inline-media-manifest="1">{"version":1,"slots":[]}</script>
   <script>
-const KV_API='/api/kv'; let lastTs=0, guardando=false;
-async function nubeCargar(){
- if(guardando) return;
- try{ const r=await fetch(KV_API); const d=await r.json();
- if(d && d._ts && d._ts!=lastTs && d._ts>lastTs){ 
-   localStorage.setItem('SISTEMA_SEGURIDAD_V01', JSON.stringify(d)); 
-   lastTs=d._ts; 
-   if(window.renderRol) window.renderRol(); // solo repinta, no recarga
+// SYNC REAL - NO TOCA TU MODELO, SOLO SINCRONIZA
+(function(){
+ const API='/api/kv'; let lastTs=0; let enviando=false;
+ async function subir(){
+  if(enviando) return; enviando=true;
+  try{
+   const datos = localStorage.getItem('SISTEMA_SEGURIDAD_V01') || localStorage.getItem('sistema_seguridad') || localStorage.getItem('rol_data');
+   if(!datos) {enviando=false; return;}
+   let obj; try{obj=JSON.parse(datos)}catch{obj={raw:datos}}
+   obj._ts=Date.now();
+   await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(obj)});
+   lastTs=obj._ts;
+  }catch(e){}
+  setTimeout(()=>enviando=false,1000);
  }
- }catch(e){}
-}
-async function nubeGuardar(){
- try{ guardando=true; const raw=localStorage.getItem('SISTEMA_SEGURIDAD_V01'); if(!raw) return;
- const data=JSON.parse(raw); data._ts=Date.now();
- await fetch(KV_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
- lastTs=data._ts; setTimeout(()=>guardando=false,1000);
- }catch(e){guardando=false;}
-}
-setInterval(nubeCargar,4000);
+ async function bajar(){
+  if(enviando) return;
+  try{
+   const r=await fetch(API); const d=await r.json();
+   if(d && d._ts && d._ts>lastTs){
+    const key = localStorage.getItem('SISTEMA_SEGURIDAD_V01')!==null?'SISTEMA_SEGURIDAD_V01':(localStorage.getItem('sistema_seguridad')!==null?'sistema_seguridad':'SISTEMA_SEGURIDAD_V01');
+    localStorage.setItem(key, JSON.stringify(d));
+    lastTs=d._ts;
+    if(window.cargarDatos) window.cargarDatos();
+    if(window.renderCalendario) window.renderCalendario();
+    if(window.location && window.mostrarRol) window.mostrarRol();
+   }
+  }catch(e){}
+ }
+ // cuando guardas, sube a la nube
+ const orig = localStorage.setItem.bind(localStorage);
+ localStorage.setItem = function(k,v){ orig(k,v); if(k.includes('SISTEMA')||k.includes('sistema')||k.includes('rol')||k.includes('guardia')) subir(); };
+ setInterval(bajar,4000);
+ bajar();
+})();
   </script>
 </body>
 </html>
