@@ -231,5 +231,39 @@ Motivo no resuelta: ${l.motivoNoResuelta}`:""}
 </script>
   <script>(function(){function m(a){var h=a.getAttribute("href");if(!h)return;try{var u=new URL(h,document.baseURI);if((u.protocol==="http:"||u.protocol==="https:")&&u.host!==location.host){a.target="_blank";a.rel="noopener noreferrer";}}catch(e){}}function s(){document.querySelectorAll("a[href]").forEach(m);}if(document.readyState!=="loading"){s();}else{document.addEventListener("DOMContentLoaded",s);}document.addEventListener("click",function(e){var a=e.target&&e.target.closest&&e.target.closest("a[href]");if(a){m(a);}},true);})();</script>
   <script type="application/json" data-clippy-inline-media-manifest="1">{"version":1,"slots":[]}</script>
+  <script>
+/* SYNC REAL VERCEL KV - AGREGADO */
+const API_KV = '/api/kv';
+let lastCloudTs = 0;
+async function cargarDeNube(){
+ try{
+  const r = await fetch(API_KV);
+  const d = await r.json();
+  if(d && d._ts && d._ts!== lastCloudTs){
+   if(d.guardias) localStorage.setItem('guardias', JSON.stringify(d.guardias));
+   if(d.guardias_data) localStorage.setItem('guardias_data', d.guardias_data);
+   if(d.rol) localStorage.setItem('rol_data', JSON.stringify(d.rol));
+   if(d.asist) localStorage.setItem('asist_data', JSON.stringify(d.asist));
+   if(d.empresa) localStorage.setItem('empresa_data', JSON.stringify(d.empresa));
+   if(d.todo) { for(const k in d.todo){ localStorage.setItem(k, JSON.stringify(d.todo[k])) } }
+   lastCloudTs = d._ts;
+   location.reload();
+  }
+ }catch(e){}
+}
+async function guardarEnNube(){
+ try{
+  const todo = {};
+  for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); try{ todo[k]=JSON.parse(localStorage.getItem(k)); }catch{ todo[k]=localStorage.getItem(k) } }
+  const payload = { todo, _ts: Date.now() };
+  await fetch(API_KV,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  lastCloudTs = payload._ts;
+ }catch(e){}
+}
+setInterval(cargarDeNube, 3000);
+const _set = localStorage.setItem.bind(localStorage);
+localStorage.setItem = function(k,v){ _set(k,v); guardarEnNube(); };
+cargarDeNube();
+  </script>
 </body>
 </html>
