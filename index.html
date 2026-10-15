@@ -266,23 +266,25 @@ localStorage.setItem = function(k,v){ _set(k,v); guardarEnNube(); };
 cargarDeNube();
   </script>
   <script>
-const KV_API='/api/kv'; let lastTs=0;
+const KV_API='/api/kv'; let lastTs=0, guardando=false;
 async function nubeCargar(){
+ if(guardando) return;
  try{ const r=await fetch(KV_API); const d=await r.json();
- if(d && d._ts && d._ts!=lastTs){ localStorage.setItem('SISTEMA_SEGURIDAD_V01', JSON.stringify(d)); lastTs=d._ts; location.reload(); }
+ if(d && d._ts && d._ts!=lastTs && d._ts>lastTs){ 
+   localStorage.setItem('SISTEMA_SEGURIDAD_V01', JSON.stringify(d)); 
+   lastTs=d._ts; 
+   if(window.renderRol) window.renderRol(); // solo repinta, no recarga
+ }
  }catch(e){}
 }
 async function nubeGuardar(){
- try{ const raw=localStorage.getItem('SISTEMA_SEGURIDAD_V01'); if(!raw) return;
+ try{ guardando=true; const raw=localStorage.getItem('SISTEMA_SEGURIDAD_V01'); if(!raw) return;
  const data=JSON.parse(raw); data._ts=Date.now();
  await fetch(KV_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
- lastTs=data._ts;
- }catch(e){}
+ lastTs=data._ts; setTimeout(()=>guardando=false,1000);
+ }catch(e){guardando=false;}
 }
-setInterval(nubeCargar,3000);
-const _setItem=localStorage.setItem.bind(localStorage);
-localStorage.setItem=function(k,v){ _setItem(k,v); if(k==='SISTEMA_SEGURIDAD_V01') nubeGuardar(); };
-nubeCargar();
+setInterval(nubeCargar,4000);
   </script>
 </body>
 </html>
